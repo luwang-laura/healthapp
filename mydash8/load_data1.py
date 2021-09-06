@@ -256,15 +256,6 @@ def get_heatmap(data_dict):
             }
         ),
     ])
-    # row2 = html.Div([
-    #     html.Div(
-    #         children=x_str,
-    #         style={
-    #             'textAlign': 'left',
-    #             'color': colors['text']
-    #         })
-    #     for x_str in "MAP: Mother\'s age when born. @#MSP: Mother smoked when pregnant. @#WBP: Weight at birth, pounds".split("@#")
-    # ])
     
     row2 = html.Div([
         html.Div(
@@ -274,74 +265,127 @@ def get_heatmap(data_dict):
                 'color': colors['text']
             }),
     ])
-    #     row2 = html.Div([
-    #     html.Div(
-    #         children=x_str,
-    #         style={
-    #             'textAlign': 'left',
-    #             'color': colors['text']
-    #         })
-    #     for x_str in "MAP: Mother\'s age when born. @#MSP: Mother smoked when pregnant. @#WBP: Weight at birth, pounds".split("@#")
-    # ])
     return [row1,row2,row3]
 
-
-def Test(data2, x_name, y_name, x_type, y_type, groups, normal=''):
-    # x_type, y_type取值0(Numerical), 1(Categrical)
-    # groups取值0(等于2), 1(大于2)
-    # normal可选参数,取值True(yes),False(no)
+def Test(data2, x_name, y_name):
+    test_dict = {1:'t-test', 2:'Che-square', 3:'Variance test'}
+    if (len(set(data2[x_name])) == 2 or len(set(data2[y_name])) == 2) and (len(set(data2[x_name])) > 8 or len(set(data2[y_name])) > 8):
+        s = 1
+    elif len(set(data2[x_name])) < 5 and len(set(data2[y_name])) < 5:
+        s = 2
+    else:
+        s = 3
+    
     try:
-        if x_type + y_type == 1 and groups == 0 and normal == True:
-            # 说明有1个变量为Categrical;T检验
+        if s == 1:
+            #说明有1个变量为Categrical;T检验
             cate = data2[x_name] if len(data2[x_name].value_counts().index) == 2 else data2[y_name]
             cate_types = data2[x_name].value_counts().index
             nums = data2[x_name] if len(data2[x_name].value_counts().index) > 2 else data2[y_name]
-            nums0 = nums[cate == cate_types[0]]
-            nums1 = nums[cate == cate_types[1]]
+            nums0 = nums[cate==cate_types[0]]
+            nums1 = nums[cate==cate_types[1]]
             t, p_two, df = st.ttest_ind(nums0, nums1)
-            words = 'T test：' + 't=' + str(round(t,2)) + ',P value=' + str(round(p_two,2)) + ',Freedom degree=' + str(round(df,2))
+            recommend = 'Suggested Approach' + test_dict[s] + '\n'
+            words = recommend + 't-test: ' + 't=' + str(round(t,2)) + ',P-value=' + str(round(p_two,2)) + ',freedom degree=' + str(round(df,2))
             alpha = 0.05
-            if (p_two < alpha):
-                words = words + '\nReject hypothesis, There is a significant difference in the weight of newborn babies whose mothers smoked during pregnancy and those whose mothers did not smoke during pregnancy.'
-            #    words = words + '\nP<α，%s has significant difference with %s %s' % \
-            #             (cate.name + str(cate_types[0]), cate.name + str(cate_types[1]), nums.name)
-            else:
-               words = words + '\nReject hypothesis，%s has no significant difference with %s %s' % \
-                        (cate.name + str(cate_types[0]), cate.name + str(cate_types[1]), nums.name)
+            if(p_two < alpha):
+                #words = words + '\nReject hypothesis, There is a significant difference in the weight of newborn babies whose mothers smoked during pregnancy and those whose mothers did not smoke during pregnancy.'
+                words = words + '\nP<α, reject hypothesis, the average value of %s and %s has significant difference with %s' %\
+                (cate.name+str(cate_types[0]), cate.name+str(cate_types[1]), nums.name)
+            else: 
+                words = words + '\nP>α, accept hypothesis, the average value of %s and %s has no significant difference with %s' %\
+                (cate.name+str(cate_types[0]), cate.name+str(cate_types[1]), nums.name)
 
-        elif len(data2[x_name].value_counts().index) < 5 and len(data2[y_name].value_counts().index) < 5:
-            # 说明有2个变量都为Categrical;卡方检验
+        elif s == 2:
+            #说明有2个变量都为Categrical;卡方检验
             table = pd.crosstab(data2[x_name], data2[y_name])
             chi = chi2_contingency(table)
-            words = 'Chi test：' + 'chi=' + str(round(chi[0],2)) + ',P value=' + str(round(chi[1],2)) + ',Freedom degree=' + str(round(chi[2],2))
-            alpha = 0.05
-            if (chi[1] < alpha):
-               words = words + '\nAccept hypothesis，%s has significant difference with %s.' % (x_name, y_name)
-            else:
-                  words = words + '\nAccept hypothesis，%s has no significant difference with %s.' % (x_name, y_name)
-        elif x_type + y_type == 1 and groups == 1:
-            # 说明有1个变量为Categrical;方差检验
-            cate = data2[x_name] if len(data2[x_name].value_counts().index) < \
-                                    len(data2[y_name].value_counts().index) else data2[y_name]
-            nums = data2[x_name] if len(data2[x_name].value_counts().index) > \
-                                    len(data2[y_name].value_counts().index) else data2[y_name]
+            recommend = 'Suggested Approach' + test_dict[s] + '\n'
+            words = recommend + 'Che-square：'+'chisq-statistic='+str(round(chi[0],2))+',P-value=' + str(round(chi[1],2))+',freedom degree='+str(round(chi[2],2))
+            alpha = 0.05 
+            if(chi[1] < alpha):
+                words = words + '\nP<α, reject hypothesis, %s and %s has significant difference' % (x_name, y_name)
+            else: 
+                words = words + '\nP>α,accept hypothesis, %s and %s has no significant difference' % (x_name, y_name)
+        elif s == 3:
+            #说明有1个变量为Categrical;方差检验
+            cate = data2[x_name] if len(data2[x_name].value_counts().index) <\
+            len(data2[y_name].value_counts().index) else data2[y_name]
+            nums = data2[x_name] if len(data2[x_name].value_counts().index) >\
+            len(data2[y_name].value_counts().index) else data2[y_name]
             aov = []
             for i in cate.value_counts().index:
-                aov.append(nums[cate == i])
+                aov.append(nums[cate==i])
             aov_test = stats.f_oneway(*aov)
-            words = '\nVariance test：\n' + 'F=' + str(round(aov_test[0],2)) + ',P-value=' + str(round(aov_test[1],2)) + '\n'
-            # + 'F=' + str(round(aov_test[0],2)) + ',P value=' + str(round(aov_test[1],2)) +"\nReject hypothesis, There is a significant difference of the baby's weight between smoking mothers and non-smoking mothers during pregnancy."
+            recommend = 'Suggested Approach：' + test_dict[s] + '\n'
+            words = recommend + 'Variance Test：' + 'F=' + str(round(aov_test[0],2)) + ',P-value=' + str(round(aov_test[1],2))
             alpha = 0.05
-            if (aov_test[1] < alpha):
-                words = words + '\nP<α，%s has significant difference with %s.\n' % (cate.name, nums.name) + '\n'
-            else:
-                words = words + '\nP>α，%s has no significant difference with %s.\n' % (cate.name, nums.name) + '\n'
+            if(aov_test[1] < alpha):
+                words = words + '\nP<α, reject hypothesis, %s has significant difference with %s.' % (cate.name, nums.name)
+            else: 
+                words = words + '\nP>α, accept hypothesis, %s has no significant difference with %s.' % (cate.name, nums.name)
         else:
-            words = 'Error, Please re-select'
+            words = 'Error, please re-select.'
     except:
-        words = 'Error, Please re-select'
-
+        words = 'Error, please re-select.'
+        
     return words
+# def Test(data2, x_name, y_name, x_type, y_type, groups, normal=''):
+#     # x_type, y_type取值0(Numerical), 1(Categrical)
+#     # groups取值0(等于2), 1(大于2)
+#     # normal可选参数,取值True(yes),False(no)
+#     try:
+#         if x_type + y_type == 1 and groups == 0 and normal == True:
+#             # 说明有1个变量为Categrical;T检验
+#             cate = data2[x_name] if len(data2[x_name].value_counts().index) == 2 else data2[y_name]
+#             cate_types = data2[x_name].value_counts().index
+#             nums = data2[x_name] if len(data2[x_name].value_counts().index) > 2 else data2[y_name]
+#             nums0 = nums[cate == cate_types[0]]
+#             nums1 = nums[cate == cate_types[1]]
+#             t, p_two, df = st.ttest_ind(nums0, nums1)
+#             words = 'T test：' + 't=' + str(round(t,2)) + ',P value=' + str(round(p_two,2)) + ',Freedom degree=' + str(round(df,2))
+#             alpha = 0.05
+#             if (p_two < alpha):
+#                 words = words + '\nReject hypothesis, There is a significant difference in the weight of newborn babies whose mothers smoked during pregnancy and those whose mothers did not smoke during pregnancy.'
+#             #    words = words + '\nP<α，%s has significant difference with %s %s' % \
+#             #             (cate.name + str(cate_types[0]), cate.name + str(cate_types[1]), nums.name)
+#             else:
+#                words = words + '\nReject hypothesis，%s has no significant difference with %s %s' % \
+#                         (cate.name + str(cate_types[0]), cate.name + str(cate_types[1]), nums.name)
+
+#         elif len(data2[x_name].value_counts().index) < 5 and len(data2[y_name].value_counts().index) < 5:
+#             # 说明有2个变量都为Categrical;卡方检验
+#             table = pd.crosstab(data2[x_name], data2[y_name])
+#             chi = chi2_contingency(table)
+#             words = 'Chi test：' + 'chi=' + str(round(chi[0],2)) + ',P value=' + str(round(chi[1],2)) + ',Freedom degree=' + str(round(chi[2],2))
+#             alpha = 0.05
+#             if (chi[1] < alpha):
+#                words = words + '\nAccept hypothesis，%s has significant difference with %s.' % (x_name, y_name)
+#             else:
+#                   words = words + '\nAccept hypothesis，%s has no significant difference with %s.' % (x_name, y_name)
+#         elif x_type + y_type == 1 and groups == 1:
+#             # 说明有1个变量为Categrical;方差检验
+#             cate = data2[x_name] if len(data2[x_name].value_counts().index) < \
+#                                     len(data2[y_name].value_counts().index) else data2[y_name]
+#             nums = data2[x_name] if len(data2[x_name].value_counts().index) > \
+#                                     len(data2[y_name].value_counts().index) else data2[y_name]
+#             aov = []
+#             for i in cate.value_counts().index:
+#                 aov.append(nums[cate == i])
+#             aov_test = stats.f_oneway(*aov)
+#             words = '\nVariance test：\n' + 'F=' + str(round(aov_test[0],2)) + ',P-value=' + str(round(aov_test[1],2)) + '\n'
+#             # + 'F=' + str(round(aov_test[0],2)) + ',P value=' + str(round(aov_test[1],2)) +"\nReject hypothesis, There is a significant difference of the baby's weight between smoking mothers and non-smoking mothers during pregnancy."
+#             alpha = 0.05
+#             if (aov_test[1] < alpha):
+#                 words = words + '\nP<α，%s has significant difference with %s.\n' % (cate.name, nums.name) + '\n'
+#             else:
+#                 words = words + '\nP>α，%s has no significant difference with %s.\n' % (cate.name, nums.name) + '\n'
+#         else:
+#             words = 'Error, Please re-select'
+#     except:
+#         words = 'Error, Please re-select'
+
+#     return words
 
 
 def get_norm(data, all_result):
