@@ -296,5 +296,5 @@ def display(btn1, btn2, btn3, dx, dy, dz):
 app.layout = dbc.Container([leftButton], 'mian', fluid=True)
 
 if __name__ == '__main__':
-    #app.run_server(host='0.0.0.0')
+    app.run_server(host='0.0.0.0')
     app.run_server(debug=True)
